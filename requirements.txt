@@ -9,3 +9,7 @@ groq
 google-generativeai
 Pillow
 google-auth
+
+requests
+
+requests
