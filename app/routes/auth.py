@@ -165,7 +165,7 @@ def signup(user: SignupRequest, db: Session = Depends(get_db)):
             )
         raise HTTPException(
             status_code=400,
-            detail="This email is not verified yet. Log in and resend confirmation, or check your inbox.",
+            detail="This email is already registered. Log in or use Forgot password.",
         )
 
     token = secrets.token_urlsafe(32)
@@ -174,20 +174,18 @@ def signup(user: SignupRequest, db: Session = Depends(get_db)):
         email=email,
         password_hash=hash_password(user.password),
         auth_provider="email",
-        email_verified=False,
-        verification_token=token,
+        email_verified=True,
+        verification_token=None,
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
-    emailed = send_verification_email(email, display, token)
-
     return {
-        "message": "Account created. Please confirm your email, then log in.",
+        "message": "Account created successfully. You can now log in.",
         "user_id": new_user.id,
-        "email_sent": emailed,
-        "email_verified": False,
+        "email_sent": False,
+        "email_verified": True,
     }
 
 
@@ -253,12 +251,6 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=404,
             detail="No account with this email. Sign up first.",
-        )
-
-    if not user.email_verified and user.auth_provider == "email":
-        raise HTTPException(
-            status_code=400,
-            detail="Confirm your email first. Log in and use Resend confirmation.",
         )
 
     if user.auth_provider == "google" and not user.password_hash:
@@ -359,11 +351,6 @@ def login(user: LoginRequest, db: Session = Depends(get_db)):
 
     if not _check_password(existing, user.password):
         return {"error": "Invalid password."}
-
-    if not existing.email_verified and existing.auth_provider == "email":
-        return {
-            "error": "Please confirm your email first. Check your inbox for the confirmation link.",
-        }
 
     db.commit()
     return _auth_response(existing)
