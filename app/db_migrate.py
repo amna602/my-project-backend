@@ -11,6 +11,7 @@ from sqlalchemy import inspect, text
 
 from app.database import engine
 
+
 # (column_name, ALTER TABLE fragment after ADD COLUMN)
 TABLE_COLUMNS: dict[str, list[tuple[str, str]]] = {
     "users": [
@@ -21,6 +22,7 @@ TABLE_COLUMNS: dict[str, list[tuple[str, str]]] = {
         ("password_hash", "password_hash VARCHAR"),
         ("google_id", "google_id VARCHAR"),
         ("auth_provider", "auth_provider VARCHAR DEFAULT 'email'"),
+        ("role", "role VARCHAR DEFAULT 'user'"),
         ("email_verified", "email_verified BOOLEAN DEFAULT 0"),
         ("verification_token", "verification_token VARCHAR"),
         ("reset_token", "reset_token VARCHAR"),
@@ -78,32 +80,51 @@ TABLE_COLUMNS: dict[str, list[tuple[str, str]]] = {
 
 def _add_missing_columns(table_name: str) -> list[str]:
     """Add any columns defined in TABLE_COLUMNS that are missing from table_name."""
+
     column_defs = TABLE_COLUMNS.get(table_name)
+
     if not column_defs:
         return []
 
     insp = inspect(engine)
+
     if table_name not in insp.get_table_names():
         return []
 
-    existing = {c["name"] for c in insp.get_columns(table_name)}
+    existing = {column["name"] for column in insp.get_columns(table_name)}
+
     added: list[str] = []
 
     with engine.begin() as conn:
         for col_name, sql_fragment in column_defs:
+
+            # Column already exists — skip it.
             if col_name in existing:
                 continue
-            conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {sql_fragment}"))
+
+            conn.execute(
+                text(
+                    f"ALTER TABLE {table_name} "
+                    f"ADD COLUMN {sql_fragment}"
+                )
+            )
+
             added.append(f"{table_name}.{col_name}")
 
     return added
 
 
 def run_all_migrations() -> list[str]:
-    """Run migrations for every app table. Returns list of columns that were added."""
+    """Run migrations for every app table.
+
+    Returns a list of columns that were added.
+    """
+
     changes: list[str] = []
+
     for table_name in TABLE_COLUMNS:
         changes.extend(_add_missing_columns(table_name))
+
     return changes
 
 

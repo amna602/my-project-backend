@@ -28,6 +28,7 @@ from app.models.chat_thread import ChatThread
 from app.models.chat_message import ChatMessage
 from app.models.user_skill import UserSkill
 from app.models.assessment_session import AssessmentSession, AssessmentItem
+from app.models.settings import AdminSettings
 
 # ✅ create tables + migrate missing columns on existing tables
 Base.metadata.create_all(bind=engine)
