@@ -1810,3 +1810,31 @@ def update_admin_settings(
         "sessionTimeout": settings.session_timeout,
         "maintenanceMode": settings.maintenance_mode,
     }
+
+
+
+
+ # ============================================================
+# TEMPORARY - PROMOTE TO ADMIN (remove after use)
+# ============================================================
+
+@router.post("/admin/promote-temp")
+def promote_to_admin_temp(
+    email: str,
+    secret: str,
+    db: Session = Depends(get_db),
+):
+    import os
+
+    if secret != os.getenv("PROMOTE_SECRET", ""):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    user = db.query(User).filter(User.email == email.lower().strip()).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.role = "admin"
+    db.commit()
+
+    return {"message": f"{email} is now admin"}
