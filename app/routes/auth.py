@@ -207,42 +207,41 @@ def get_all_users(
         .all()
     )
 
-    return [
+    result = []
 
-        {
+    for user in users:
+
+        conversations_count = (
+            db.query(ChatThread)
+            .filter(ChatThread.user_id == user.id)
+            .count()
+        )
+
+        progress = (
+            db.query(Progress)
+            .filter(Progress.user_id == user.id)
+            .first()
+        )
+
+        problems_solved = (
+            progress.solved_questions
+            if progress and progress.solved_questions
+            else 0
+        )
+
+        result.append({
             "id": user.id,
+            "name": (user.name or "").strip(),
+            "username": (user.username or "").strip(),
+            "email": (user.email or ""),
+            "status": "Active" if user.email_verified else "Inactive",
+            "joined": user.created_at.isoformat() if user.created_at else None,
+            "role": user.role or "user",
+            "conversations": conversations_count,
+            "problemsSolved": problems_solved,
+        })
 
-            "name": (
-                user.name or ""
-            ).strip(),
-
-            "username": (
-                user.username or ""
-            ).strip(),
-
-            "email": (
-                user.email or ""
-            ),
-
-            "status": (
-                "Active"
-                if user.email_verified
-                else "Inactive"
-            ),
-
-            "joined": (
-                user.created_at.isoformat()
-                if user.created_at
-                else None
-            ),
-
-            "role": (
-                user.role or "user"
-            ),
-        }
-
-        for user in users
-    ]
+    return result
 
 
 # ============================================================
